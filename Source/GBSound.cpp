@@ -2,6 +2,7 @@
 #include "CPU.h"
 #include "SDL.h"
 #include "BinaryOps.h"
+#include <algorithm>
 
 using namespace BinaryOps;
 
@@ -116,7 +117,20 @@ int32 PulseA::GetFrequencySweepTime()
 float Wave::GetVolume(int32 Cycles)
 {
 	uint8 Volume = (m_CHEnvelope >> 5) & 0x03;
-	return Volume == 0x00 ? 0.0f : 1.0f;
+
+	switch(Volume)
+	{
+	case 0:
+		return 0.0f;
+	case 1:
+		return 1.0f;
+	case 2:
+		return 0.5f;
+	case 3:
+		return 0.25f;
+	}
+
+	return 1.0f;
 }
 
 uint8 PulseGeneric::GetPulseRatio()
@@ -157,13 +171,22 @@ void GBSound::AudioCallback(void*  userdata,
 {
 	GBSound* Device = (GBSound*)userdata;
 
-	int32 sampleCount = len / sizeof(SoundSample);
+	uint32 sampleCount = len / sizeof(SoundSample);
 	SoundSample* sampleStream = (SoundSample*)stream;
 
-	for (int32 i = 0; i < sampleCount; ++i)
+	for (uint32 i = 0; i < sampleCount; ++i)
 	{
-		sampleStream[i] = Device->m_GeneratedSamples[i];
+		if (i < Device->m_CurrentSample)
+		{
+			sampleStream[i] = Device->m_GeneratedSamples[i];
+		}
+		else
+		{
+			sampleStream[i].m_Left = 0.0f;
+			sampleStream[i].m_Right = 0.0f;
+		}
 	}
+	Device->m_CurrentSample = 0;
 }
 
 uint8& GBSound::ReadMemory(uint16 address)
@@ -630,12 +653,12 @@ void GBSound::MixChannel(const SoundChannel& Channel, int32 Number, float& Left,
 
 	if (goesLeft)
 	{
-		Left += sample;
+		Left += sample * 0.25f; // so 4 channels at full power makes 1
 	}
 
 	if (goesRight)
 	{
-		Right += sample;
+		Right += sample * 0.25f;
 	}
 }
 

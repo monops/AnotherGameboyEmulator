@@ -185,7 +185,7 @@ private:
 
 	//sound output
 	SDL_AudioDeviceID m_Device;
-	SoundSample m_GeneratedSamples[BufferSize];
+	SoundSample m_GeneratedSamples[BufferSize]; // just to be sure to not overrun
 	uint32 m_CurrentCyclesCount = 0;
 	uint32 m_CurrentSample = 0;
 

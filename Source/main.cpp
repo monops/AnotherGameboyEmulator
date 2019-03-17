@@ -19,14 +19,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	{
 		//cart.LoadFile("..\\ROMS\\Metroid2.gb");
 		//cart.LoadFile("..\\ROMS\\Gargoyle.gb");
-		cart.LoadFile("..\\ROMS\\Castlevania2.gb");
+		//cart.LoadFile("..\\ROMS\\Castlevania2.gb");
 		//cart.LoadFile("..\\ROMS\\TMNT2.gb");
 		//cart.LoadFile("..\\ROMS\\TMNT1.gb");
 		//cart.LoadFile("..\\ROMS\\DonkeyKong.gb");
 		//cart.LoadFile("..\\ROMS\\RType.gb");
 		//cart.LoadFile("..\\ROMS\\DuckTales2.gb");
 		//cart.LoadFile("..\\ROMS\\PokemonRed.gb");
-		//Cart.LoadFile("..\\ROMS\\Probotector.gb");
+		//cart.LoadFile("..\\ROMS\\Probotector.gb");
 		//cart.LoadFile("..\\ROMS\\SuperMarioLand.gb");
 		//cart.LoadFile("..\\ROMS\\SuperMarioLand2.gb");
 		//cart.LoadFile("..\\ROMS\\SuperMarioLand3.gb");
@@ -49,7 +49,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		//cart.LoadFile("..\\ROMS\\Tests\\mem_timing\\individual\\01-read_timing.gb");
 
 		//Mem Timing
-		//cart.LoadFile("..\\ROMS\\Tests\\mem_timing\\individual\\01-read_timing.gb");
+		cart.LoadFile("..\\ROMS\\Tests\\mem_timing\\individual\\01-read_timing.gb");
 	}
 	else
 	{
