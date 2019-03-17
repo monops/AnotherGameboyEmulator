@@ -58,7 +58,7 @@ public:
 	virtual void Update(int32 Cycles) override;
 protected:
 	float m_TimeBeforeNextLenghtCheck = 0.0f;
-	int32 m_CurrentPulseStep = 0; // max 5;
+	int32 m_CurrentPulseStep = 0; // max 7;
 	float m_CurrentSubPulseTime = 0.0f;
 
 	float m_OutputBeforeVolume = 0.0f;
@@ -113,6 +113,7 @@ protected:
 	float m_TimeBeforeNextLenghtCheck = 0.0f;
 	int32 m_CurrentSample = 0; // max 32;
 	float m_CurrentSampleTime = 0.0f;
+	int32 m_CurrentSampleTimeCycles = 0;
 };
 
 class Noise : public SoundChannel

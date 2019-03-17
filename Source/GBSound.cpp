@@ -116,7 +116,7 @@ int32 PulseA::GetFrequencySweepTime()
 float Wave::GetVolume(int32 Cycles)
 {
 	uint8 Volume = (m_CHEnvelope >> 5) & 0x03;
-	return float(Volume) / 3.0f;
+	return Volume == 0x00 ? 0.0f : 1.0f;
 }
 
 uint8 PulseGeneric::GetPulseRatio()
@@ -316,11 +316,18 @@ void GBSound::WriteMemory(uint16 address, uint8 Value)
 
 void PulseGeneric::Update(int32 Cycles)
 {
-	if (!IsOn())
+	if (!IsOn() && (GetLength() == 0))
 	{
 		m_Output = 0.0f;
 		return;
 	}
+
+	uint8 PulseWaveforms[4] ={
+		0x01,
+		0x81,
+		0x87,
+		0x7E
+	};
 
 	float timeElapsed = float(Cycles) * Timings::GBClockTime;
 	m_TimeBeforeNextLenghtCheck -= timeElapsed;
@@ -339,7 +346,7 @@ void PulseGeneric::Update(int32 Cycles)
 	if ((GetLength() > 0) || (!GetCounterConsecutive()) )
 	{
 		float frequency = float(Timings::GBClockSpeed) / (32.0f * (2048.0f - float(GetFrequency())));
-		float pulseStepLength = (1.0f / frequency) / 5.0f;
+		float pulseStepLength = (1.0f / frequency) / 8.0f;
 		m_CurrentSubPulseTime += timeElapsed;
 		if (m_CurrentSubPulseTime >= pulseStepLength)
 		{
@@ -347,26 +354,12 @@ void PulseGeneric::Update(int32 Cycles)
 			m_CurrentSubPulseTime = 0.0f;
 			//output the sample
 			uint8 pulseRatio = GetPulseRatio();
-			switch (pulseRatio)
-			{
-			case 0: //12.5%
-				m_OutputBeforeVolume = (m_CurrentPulseStep == 0) ? 1.0f : 0.0f;
-				break;
-			case 1: //25%
-				m_OutputBeforeVolume = (m_CurrentPulseStep <= 1) ? 1.0f : 0.0f;
-				break;
-			case 2: //50%
-				m_OutputBeforeVolume = (m_CurrentPulseStep <= 2) ? 1.0f : 0.0f;
-				break;
-			case 3: //75%
-				m_OutputBeforeVolume = (m_CurrentPulseStep <= 3) ? 1.0f : 0.0f;
-				break;
-			default:
-				break;
-			}
+
+			uint8 waveform = PulseWaveforms[pulseRatio];
+			m_OutputBeforeVolume = GetBit(m_CurrentPulseStep, waveform) ? 1.0f : 0.0f;
 
 			m_CurrentPulseStep++;
-			if (m_CurrentPulseStep >= 5)
+			if (m_CurrentPulseStep >= 8)
 			{
 				m_CurrentPulseStep = 0;
 			}
@@ -397,20 +390,41 @@ void PulseGeneric::Update(int32 Cycles)
 
 void Wave::UpdateWaveform()
 {
+	uint8 Shift = (m_CHEnvelope >> 5) & 0x03;
+	uint8 bitShift = 0;
+	switch(Shift)
+	{
+	case 0x00:
+		bitShift = 0;
+		break;
+	case 0x01:
+		bitShift = 0;
+		break;
+	case 0x02:
+		bitShift = 1;
+		break;
+	case 0x03:
+		bitShift = 2;
+		break;
+	default:
+		break;
+	}
+
 	uint8* compressedWavePattern = m_SoundSystem->GetWavePattern();
 	for (int32 i = 0; i < 16; ++i)
 	{
 		uint8 value = compressedWavePattern[i];
 		uint8 highVal = (value >> 4) & 0x0F;
 		uint8 lowVal = value & 0x0F;
-		m_currentWaveform[i * 2] = highVal;
-		m_currentWaveform[i * 2 + 1] = lowVal;
+
+		m_currentWaveform[i * 2] = highVal >> bitShift;
+		m_currentWaveform[i * 2 + 1] = lowVal >> bitShift;
 	}
 }
 
 void Wave::Update(int32 Cycles)
 {
-	if (!IsOn())
+	if (!IsOn() && (GetLength() == 0))
 	{
 		m_Output = 0.0f;
 		return;
@@ -434,12 +448,26 @@ void Wave::Update(int32 Cycles)
 
 	if ((GetLength() > 0) || (!GetCounterConsecutive()))
 	{
-		float frequency = float(Timings::GBClockSpeed) / (64.0f * (2048.0f - float(GetFrequency())));
+		/*float frequency = float(Timings::GBClockSpeed) / (64.0f * (2048.0f - float(GetFrequency())));
 		float sampleStepLength = (1.0f / frequency) / 32.0f;
 		m_CurrentSampleTime += timeElapsed;
 		if (m_CurrentSampleTime >= sampleStepLength)
 		{
 			m_CurrentSampleTime = 0.0f;
+			m_Output = (float(m_currentWaveform[m_CurrentSample]) / 16.0f) * GetVolume(Cycles);
+
+			m_CurrentSample++;
+			if (m_CurrentSample >= 32)
+			{
+				m_CurrentSample = 0;
+			}
+		}*/
+
+		int32 frequencyCycles = (64.0f * (2048.0f - float(GetFrequency()))) / 32;
+		m_CurrentSampleTimeCycles += Cycles;
+		if (m_CurrentSampleTimeCycles >= frequencyCycles)
+		{
+			m_CurrentSampleTimeCycles -= frequencyCycles;
 			m_Output = (float(m_currentWaveform[m_CurrentSample]) / 16.0f) * GetVolume(Cycles);
 
 			m_CurrentSample++;
@@ -513,7 +541,7 @@ bool Noise::ShiftRegister()
 
 void Noise::Update(int32 Cycles)
 {
-	if (!IsOn())
+	if (!IsOn() && (GetLength() == 0))
 	{
 		m_Output = 0.0f;
 		return;
@@ -541,9 +569,6 @@ void Noise::Update(int32 Cycles)
 		{
 			m_CurrentSampleTime = sampleLength;
 
-			float divider = float(RAND_MAX);
-
-			//m_OutputBeforeVolume = (float(rand()) / divider) > 0.5f ? 1.0f : 0.0f; 
 			m_OutputBeforeVolume= ShiftRegister() ? 1.0f : 0.0f;
 		}
 
@@ -561,6 +586,7 @@ void Noise::Update(int32 Cycles)
 				}
 			}
 		}
+
 		m_Output = m_OutputBeforeVolume * GetVolume(Cycles);
 	}
 	else
