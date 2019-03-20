@@ -103,6 +103,11 @@ int32 PulseA::GetFrequencySweepShiftCount()
 	return SweepCount;
 }
 
+void PulseA::SetFrequencyShiftCount(uint8 newCount)
+{
+	m_CHSweep = SetMask(0x07, m_CHSweep, newCount);
+}
+
 bool PulseA::GetFrequenctSweepDirection()
 {
 	return GetBit(3, m_CHSweep);
@@ -335,6 +340,51 @@ void GBSound::WriteMemory(uint16 address, uint8 Value)
 	default:
 		break;
 	}
+}
+
+void PulseA::Update(int32 Cycles)
+{
+	//calculate frequency sweep
+	static float frequencyTable[] = {
+		0.0f,
+		1.0f / 128.0f,
+		2.0f / 128.0f,
+		3.0f / 128.0f,
+		4.0f / 128.0f,
+		5.0f / 128.0f,
+		6.0f / 128.0f,
+		7.0f / 128.0f
+	};
+
+	int32 sweepCount = GetFrequencySweepShiftCount();
+	int32 sweepTime = GetFrequencySweepTime();
+	if (sweepCount > 0 && sweepTime > 0)
+	{
+		float frequencyWait = frequencyTable[sweepTime];
+		float timeElapsed = float(Cycles) * Timings::GBClockTime;
+		m_currentSweepTime += timeElapsed;
+		if (m_currentSweepTime >= frequencyWait)
+		{
+			m_currentSweepTime -= frequencyWait;
+			bool PlusOrMinus = GetFrequenctSweepDirection();
+			float newFrequency = 0.0f;
+			if (!PlusOrMinus)
+			{
+				newFrequency = float(GetFrequency()) + float(GetFrequency()) / std::powf(2.0f, float(sweepCount));
+			}
+			else
+			{
+				newFrequency = float(GetFrequency()) - float(GetFrequency()) / std::powf(2.0f, float(sweepCount));
+			}
+			SetFrequency(uint16(newFrequency));
+			if (sweepCount > 0)
+			{
+				SetFrequencyShiftCount(sweepCount - 1);
+			}
+		}
+	}
+
+	PulseGeneric::Update(Cycles);
 }
 
 void PulseGeneric::Update(int32 Cycles)
@@ -653,12 +703,12 @@ void GBSound::MixChannel(const SoundChannel& Channel, int32 Number, float& Left,
 
 	if (goesLeft)
 	{
-		Left += sample * 0.25f; // so 4 channels at full power makes 1
+		Left += sample;// *0.25f; // so 4 channels at full power makes 1
 	}
 
 	if (goesRight)
 	{
-		Right += sample * 0.25f;
+		Right += sample;// *0.25f;
 	}
 }
 

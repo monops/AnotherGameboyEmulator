@@ -75,6 +75,12 @@ public:
 	int32 GetFrequencySweepShiftCount();
 	bool GetFrequenctSweepDirection();
 	int32 GetFrequencySweepTime();
+	void SetFrequencyShiftCount(uint8 newCount);
+
+	virtual void Update(int32 Cycles) override;
+
+protected:
+	float m_currentSweepTime = 0.0f;
 };
 
 class PulseB : public PulseGeneric
